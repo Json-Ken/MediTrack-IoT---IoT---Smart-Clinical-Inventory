@@ -32,13 +32,13 @@
    const { user, logout } = useAuth();
    const [collapsed, setCollapsed] = useState(false);
  
-   return (
-     <motion.aside
-       initial={{ x: -280 }}
-       animate={{ x: 0, width: collapsed ? 80 : 280 }}
-       transition={{ duration: 0.3, ease: 'easeOut' }}
-       className="fixed left-0 top-0 h-screen sidebar-gradient flex flex-col z-50"
-     >
+  return (
+    <motion.aside
+      initial={{ x: -280 }}
+      animate={{ x: 0, width: collapsed ? 80 : 280 }}
+      transition={{ duration: 0.3, ease: 'easeOut' }}
+      className="fixed left-0 top-0 h-screen sidebar-gradient flex-col z-50 hidden lg:flex"
+    >
        {/* Logo */}
        <div className="p-6 border-b border-sidebar-border">
          <div className="flex items-center gap-3">

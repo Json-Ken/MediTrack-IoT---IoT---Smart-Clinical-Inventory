@@ -33,57 +33,57 @@
          </div>
        </motion.div>
  
-       {/* Stats Grid */}
-       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-         <StatCard
-           title="Total Medicines"
-           value={stats.totalMedicines}
-           icon={Package}
-           trend={{ value: 5, isPositive: true }}
-           delay={0}
-         />
-         <StatCard
-           title="Low Stock Items"
-           value={stats.lowStockCount}
-           icon={TrendingDown}
-           variant="warning"
-           delay={0.1}
-         />
-         <StatCard
-           title="Expiring Soon"
-           value={stats.expiringCount}
-           icon={Clock}
-           variant="danger"
-           delay={0.2}
-         />
-         <StatCard
-           title="Theft Alerts"
-           value={stats.theftAlerts}
-           icon={Shield}
-           variant={stats.theftAlerts > 0 ? 'danger' : 'success'}
-           delay={0.3}
-         />
-       </div>
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <StatCard
+          title="Total Medicines"
+          value={stats.totalMedicines}
+          icon={Package}
+          trend={{ value: 5, isPositive: true }}
+          delay={0}
+        />
+        <StatCard
+          title="Low Stock Items"
+          value={stats.lowStockCount}
+          icon={TrendingDown}
+          variant="warning"
+          delay={0.1}
+        />
+        <StatCard
+          title="Expiring Soon"
+          value={stats.expiringCount}
+          icon={Clock}
+          variant="danger"
+          delay={0.2}
+        />
+        <StatCard
+          title="Theft Alerts"
+          value={stats.theftAlerts}
+          icon={Shield}
+          variant={stats.theftAlerts > 0 ? 'danger' : 'success'}
+          delay={0.3}
+        />
+      </div>
  
-       {/* Activity Stats */}
-       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-         <StatCard
-           title="Dispensed Today"
-           value={`${stats.todayDispensed} units`}
-           icon={TrendingUp}
-           trend={{ value: 12, isPositive: false }}
-           variant="default"
-           delay={0.4}
-         />
-         <StatCard
-           title="Restocked Today"
-           value={`${stats.todayRestocked} units`}
-           icon={Package}
-           trend={{ value: 25, isPositive: true }}
-           variant="success"
-           delay={0.5}
-         />
-       </div>
+      {/* Activity Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+        <StatCard
+          title="Dispensed Today"
+          value={`${stats.todayDispensed} units`}
+          icon={TrendingUp}
+          trend={{ value: 12, isPositive: false }}
+          variant="default"
+          delay={0.4}
+        />
+        <StatCard
+          title="Restocked Today"
+          value={`${stats.todayRestocked} units`}
+          icon={Package}
+          trend={{ value: 25, isPositive: true }}
+          variant="success"
+          delay={0.5}
+        />
+      </div>
  
        {/* Charts and Alerts */}
        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
