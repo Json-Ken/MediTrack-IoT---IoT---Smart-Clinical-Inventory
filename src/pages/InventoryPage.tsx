@@ -36,74 +36,74 @@
      expired: medicines.filter(m => m.status === 'expired').length,
    };
  
-   return (
-     <div className="space-y-6">
-       {/* Header */}
-       <motion.div
-         initial={{ opacity: 0, y: -20 }}
-         animate={{ opacity: 1, y: 0 }}
-         className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
-       >
-         <div>
-           <h1 className="text-3xl font-bold text-foreground">Inventory</h1>
-           <p className="text-muted-foreground mt-1">
-             {medicines.length} medicines tracked • Real-time stock levels
-           </p>
-         </div>
-         <Button className="bg-primary hover:bg-primary/90">
-           <Plus className="w-4 h-4 mr-2" />
-           Add Medicine
-         </Button>
-       </motion.div>
+  return (
+    <div className="space-y-4 sm:space-y-6">
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+      >
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Inventory</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">
+            {medicines.length} medicines tracked • Real-time stock levels
+          </p>
+        </div>
+        <Button className="bg-primary hover:bg-primary/90 w-full sm:w-auto">
+          <Plus className="w-4 h-4 mr-2" />
+          Add Medicine
+        </Button>
+      </motion.div>
  
-       {/* Filters */}
-       <motion.div
-         initial={{ opacity: 0, y: 20 }}
-         animate={{ opacity: 1, y: 0 }}
-         transition={{ delay: 0.1 }}
-         className="bg-card rounded-2xl border shadow-md p-4"
-       >
-         <div className="flex flex-col md:flex-row gap-4">
-           {/* Search */}
-           <div className="relative flex-1">
-             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-             <Input
-               placeholder="Search medicines..."
-               value={search}
-               onChange={(e) => setSearch(e.target.value)}
-               className="pl-12 h-11 bg-background"
-             />
-           </div>
+      {/* Filters */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="bg-card rounded-2xl border shadow-md p-3 sm:p-4"
+      >
+        <div className="flex flex-col gap-3 sm:gap-4">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 w-4 sm:w-5 h-4 sm:h-5 text-muted-foreground" />
+            <Input
+              placeholder="Search medicines..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-10 sm:pl-12 h-10 sm:h-11 bg-background text-sm"
+            />
+          </div>
+
+          {/* Status Filters */}
+          <div className="flex flex-wrap gap-2">
+            {(['all', 'ok', 'low', 'critical', 'expired'] as const).map((status) => (
+              <Button
+                key={status}
+                variant={statusFilter === status ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setStatusFilter(status)}
+                className={cn(
+                  'capitalize text-xs sm:text-sm',
+                  statusFilter === status && 'bg-primary text-primary-foreground'
+                )}
+              >
+                {status === 'all' ? 'All' : statusConfig[status].label}
+                <span className="ml-1 sm:ml-2 text-xs opacity-70">({statusCounts[status]})</span>
+              </Button>
+            ))}
+          </div>
+        </div>
+      </motion.div>
  
-           {/* Status Filters */}
-           <div className="flex flex-wrap gap-2">
-             {(['all', 'ok', 'low', 'critical', 'expired'] as const).map((status) => (
-               <Button
-                 key={status}
-                 variant={statusFilter === status ? 'default' : 'outline'}
-                 size="sm"
-                 onClick={() => setStatusFilter(status)}
-                 className={cn(
-                   'capitalize',
-                   statusFilter === status && 'bg-primary text-primary-foreground'
-                 )}
-               >
-                 {status === 'all' ? 'All' : statusConfig[status].label}
-                 <span className="ml-2 text-xs opacity-70">({statusCounts[status]})</span>
-               </Button>
-             ))}
-           </div>
-         </div>
-       </motion.div>
- 
-       {/* Inventory Grid */}
-       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-         <AnimatePresence mode="popLayout">
-           {filteredMedicines.map((medicine, index) => (
-             <MedicineCard key={medicine.id} medicine={medicine} index={index} />
-           ))}
-         </AnimatePresence>
-       </div>
+      {/* Inventory Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
+        <AnimatePresence mode="popLayout">
+          {filteredMedicines.map((medicine, index) => (
+            <MedicineCard key={medicine.id} medicine={medicine} index={index} />
+          ))}
+        </AnimatePresence>
+      </div>
  
        {filteredMedicines.length === 0 && (
          <motion.div
