@@ -42,7 +42,7 @@
      // Simulate processing time
      await new Promise(resolve => setTimeout(resolve, 500));
  
-     const result = dispenseMedicine(selectedMedicine, qty, user.id, user.name, notes || undefined);
+     const result = await dispenseMedicine(selectedMedicine, qty, user.id, user.name, notes || undefined);
  
      if (result.success) {
        if (result.alert) {
