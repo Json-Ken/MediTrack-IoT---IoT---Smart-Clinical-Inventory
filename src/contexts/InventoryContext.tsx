@@ -176,28 +176,41 @@ interface InventoryContextType {
      setStats(prev => ({ ...prev, todayRestocked: prev.todayRestocked + quantity }));
    };
  
-   const acknowledgeAlert = (alertId: string) => {
-     setAlerts(prev =>
-       prev.map(a => (a.id === alertId ? { ...a, acknowledged: true } : a))
-     );
-   };
- 
-   return (
-     <InventoryContext.Provider
-       value={{
-         medicines,
-         alerts,
-         auditLogs,
-         dispenseRecords,
-         stats,
-         dispenseMedicine,
-         restockMedicine,
-         acknowledgeAlert,
-       }}
-     >
-       {children}
-     </InventoryContext.Provider>
-   );
+    const addMedicine = (medicine: Omit<Medicine, 'id' | 'status'>) => {
+      const status = getStockStatus(medicine.quantity, medicine.reorderLevel);
+      const newMedicine: Medicine = {
+        ...medicine,
+        id: Date.now().toString(),
+        status,
+      };
+      setMedicines(prev => [...prev, newMedicine]);
+      setStats(prev => ({ ...prev, totalMedicines: prev.totalMedicines + 1 }));
+    };
+
+    const acknowledgeAlert = (alertId: string) => {
+      setAlerts(prev =>
+        prev.map(a => (a.id === alertId ? { ...a, acknowledged: true } : a))
+      );
+    };
+
+    return (
+      <InventoryContext.Provider
+        value={{
+          medicines,
+          alerts,
+          auditLogs,
+          dispenseRecords,
+          stats,
+          addMedicine,
+          dispenseMedicine,
+          restockMedicine,
+          acknowledgeAlert,
+        }}
+      >
+        {children}
+      </InventoryContext.Provider>
+    );
+  }
  }
  
  export function useInventory() {
