@@ -13,16 +13,17 @@
    return Math.abs(hash).toString(16).padStart(12, '0');
  };
  
- interface InventoryContextType {
-   medicines: Medicine[];
-   alerts: Alert[];
-   auditLogs: AuditLog[];
-   dispenseRecords: DispenseRecord[];
-   stats: DashboardStats;
-   dispenseMedicine: (medicineId: string, quantity: number, userId: string, userName: string, notes?: string) => { success: boolean; alert?: Alert };
-   restockMedicine: (medicineId: string, quantity: number, userId: string, userName: string) => void;
-   acknowledgeAlert: (alertId: string) => void;
- }
+interface InventoryContextType {
+    medicines: Medicine[];
+    alerts: Alert[];
+    auditLogs: AuditLog[];
+    dispenseRecords: DispenseRecord[];
+    stats: DashboardStats;
+    addMedicine: (medicine: Omit<Medicine, 'id' | 'status'>) => void;
+    dispenseMedicine: (medicineId: string, quantity: number, userId: string, userName: string, notes?: string) => { success: boolean; alert?: Alert };
+    restockMedicine: (medicineId: string, quantity: number, userId: string, userName: string) => void;
+    acknowledgeAlert: (alertId: string) => void;
+  }
  
  const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
  
