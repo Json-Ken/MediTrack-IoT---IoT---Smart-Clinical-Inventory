@@ -211,7 +211,6 @@ interface InventoryContextType {
       </InventoryContext.Provider>
     );
   }
- }
  
  export function useInventory() {
    const context = useContext(InventoryContext);
