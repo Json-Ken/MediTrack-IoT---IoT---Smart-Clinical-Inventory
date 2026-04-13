@@ -13,16 +13,17 @@
    return Math.abs(hash).toString(16).padStart(12, '0');
  };
  
- interface InventoryContextType {
-   medicines: Medicine[];
-   alerts: Alert[];
-   auditLogs: AuditLog[];
-   dispenseRecords: DispenseRecord[];
-   stats: DashboardStats;
-   dispenseMedicine: (medicineId: string, quantity: number, userId: string, userName: string, notes?: string) => { success: boolean; alert?: Alert };
-   restockMedicine: (medicineId: string, quantity: number, userId: string, userName: string) => void;
-   acknowledgeAlert: (alertId: string) => void;
- }
+interface InventoryContextType {
+    medicines: Medicine[];
+    alerts: Alert[];
+    auditLogs: AuditLog[];
+    dispenseRecords: DispenseRecord[];
+    stats: DashboardStats;
+    addMedicine: (medicine: Omit<Medicine, 'id' | 'status'>) => void;
+    dispenseMedicine: (medicineId: string, quantity: number, userId: string, userName: string, notes?: string) => { success: boolean; alert?: Alert };
+    restockMedicine: (medicineId: string, quantity: number, userId: string, userName: string) => void;
+    acknowledgeAlert: (alertId: string) => void;
+  }
  
  const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
  
@@ -175,29 +176,41 @@
      setStats(prev => ({ ...prev, todayRestocked: prev.todayRestocked + quantity }));
    };
  
-   const acknowledgeAlert = (alertId: string) => {
-     setAlerts(prev =>
-       prev.map(a => (a.id === alertId ? { ...a, acknowledged: true } : a))
-     );
-   };
- 
-   return (
-     <InventoryContext.Provider
-       value={{
-         medicines,
-         alerts,
-         auditLogs,
-         dispenseRecords,
-         stats,
-         dispenseMedicine,
-         restockMedicine,
-         acknowledgeAlert,
-       }}
-     >
-       {children}
-     </InventoryContext.Provider>
-   );
- }
+    const addMedicine = (medicine: Omit<Medicine, 'id' | 'status'>) => {
+      const status = getStockStatus(medicine.quantity, medicine.reorderLevel);
+      const newMedicine: Medicine = {
+        ...medicine,
+        id: Date.now().toString(),
+        status,
+      };
+      setMedicines(prev => [...prev, newMedicine]);
+      setStats(prev => ({ ...prev, totalMedicines: prev.totalMedicines + 1 }));
+    };
+
+    const acknowledgeAlert = (alertId: string) => {
+      setAlerts(prev =>
+        prev.map(a => (a.id === alertId ? { ...a, acknowledged: true } : a))
+      );
+    };
+
+    return (
+      <InventoryContext.Provider
+        value={{
+          medicines,
+          alerts,
+          auditLogs,
+          dispenseRecords,
+          stats,
+          addMedicine,
+          dispenseMedicine,
+          restockMedicine,
+          acknowledgeAlert,
+        }}
+      >
+        {children}
+      </InventoryContext.Provider>
+    );
+  }
  
  export function useInventory() {
    const context = useContext(InventoryContext);
