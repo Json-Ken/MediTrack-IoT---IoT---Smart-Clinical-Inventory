@@ -1,60 +1,139 @@
- import { useState } from 'react';
- import { motion, AnimatePresence } from 'framer-motion';
- import { Search, Filter, Package, AlertTriangle, Clock, CheckCircle, Plus } from 'lucide-react';
- import { Input } from '@/components/ui/input';
- import { Button } from '@/components/ui/button';
- import { Badge } from '@/components/ui/badge';
- import { useInventory } from '@/contexts/InventoryContext';
- import { Medicine, StockStatus } from '@/types/inventory';
- import { cn } from '@/lib/utils';
- import { format } from 'date-fns';
- 
- const statusConfig: Record<StockStatus, { label: string; icon: typeof CheckCircle; className: string }> = {
-   ok: { label: 'In Stock', icon: CheckCircle, className: 'bg-success/10 text-success border-success/20' },
-   low: { label: 'Low Stock', icon: AlertTriangle, className: 'bg-warning/10 text-warning border-warning/20' },
-   critical: { label: 'Critical', icon: AlertTriangle, className: 'bg-danger/10 text-danger border-danger/20' },
-   expired: { label: 'Expired', icon: Clock, className: 'bg-muted text-muted-foreground border-muted' },
- };
- 
- export function InventoryPage() {
-   const { medicines } = useInventory();
-   const [search, setSearch] = useState('');
-   const [statusFilter, setStatusFilter] = useState<StockStatus | 'all'>('all');
- 
-   const filteredMedicines = medicines.filter(m => {
-     const matchesSearch = m.name.toLowerCase().includes(search.toLowerCase()) ||
-       m.category.toLowerCase().includes(search.toLowerCase());
-     const matchesStatus = statusFilter === 'all' || m.status === statusFilter;
-     return matchesSearch && matchesStatus;
-   });
- 
-   const statusCounts = {
-     all: medicines.length,
-     ok: medicines.filter(m => m.status === 'ok').length,
-     low: medicines.filter(m => m.status === 'low').length,
-     critical: medicines.filter(m => m.status === 'critical').length,
-     expired: medicines.filter(m => m.status === 'expired').length,
-   };
- 
-  return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-      >
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Inventory</h1>
-          <p className="text-sm sm:text-base text-muted-foreground mt-1">
-            {medicines.length} medicines tracked • Real-time stock levels
-          </p>
-        </div>
-        <Button className="bg-primary hover:bg-primary/90 w-full sm:w-auto">
-          <Plus className="w-4 h-4 mr-2" />
-          Add Medicine
-        </Button>
-      </motion.div>
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Search, Filter, Package, AlertTriangle, Clock, CheckCircle, Plus } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useInventory } from '@/contexts/InventoryContext';
+import { Medicine, StockStatus } from '@/types/inventory';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import { toast } from 'sonner';
+
+const statusConfig: Record<StockStatus, { label: string; icon: typeof CheckCircle; className: string }> = {
+  ok: { label: 'In Stock', icon: CheckCircle, className: 'bg-success/10 text-success border-success/20' },
+  low: { label: 'Low Stock', icon: AlertTriangle, className: 'bg-warning/10 text-warning border-warning/20' },
+  critical: { label: 'Critical', icon: AlertTriangle, className: 'bg-danger/10 text-danger border-danger/20' },
+  expired: { label: 'Expired', icon: Clock, className: 'bg-muted text-muted-foreground border-muted' },
+};
+
+export function InventoryPage() {
+  const { medicines, addMedicine } = useInventory();
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StockStatus | 'all'>('all');
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [newMed, setNewMed] = useState({
+    name: '', category: '', quantity: '', reorderLevel: '',
+    expiryDate: '', batchNumber: '', supplier: '', unitPrice: '',
+  });
+
+  const handleAddMedicine = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMed.name || !newMed.quantity) {
+      toast.error('Name and quantity are required');
+      return;
+    }
+    addMedicine({
+      name: newMed.name,
+      category: newMed.category || 'General',
+      quantity: parseInt(newMed.quantity),
+      reorderLevel: parseInt(newMed.reorderLevel) || 10,
+      expiryDate: newMed.expiryDate || new Date(Date.now() + 365 * 86400000).toISOString(),
+      batchNumber: newMed.batchNumber || `BATCH-${Date.now()}`,
+      supplier: newMed.supplier || 'Unknown',
+      unitPrice: parseFloat(newMed.unitPrice) || 0,
+    });
+    toast.success(`${newMed.name} added to inventory`);
+    setNewMed({ name: '', category: '', quantity: '', reorderLevel: '', expiryDate: '', batchNumber: '', supplier: '', unitPrice: '' });
+    setDialogOpen(false);
+  };
+
+  const filteredMedicines = medicines.filter(m => {
+    const matchesSearch = m.name.toLowerCase().includes(search.toLowerCase()) ||
+      m.category.toLowerCase().includes(search.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || m.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  const statusCounts = {
+    all: medicines.length,
+    ok: medicines.filter(m => m.status === 'ok').length,
+    low: medicines.filter(m => m.status === 'low').length,
+    critical: medicines.filter(m => m.status === 'critical').length,
+    expired: medicines.filter(m => m.status === 'expired').length,
+  };
+
+ return (
+   <div className="space-y-4 sm:space-y-6">
+     {/* Header */}
+     <motion.div
+       initial={{ opacity: 0, y: -20 }}
+       animate={{ opacity: 1, y: 0 }}
+       className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+     >
+       <div>
+         <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Inventory</h1>
+         <p className="text-sm sm:text-base text-muted-foreground mt-1">
+           {medicines.length} medicines tracked • Real-time stock levels
+         </p>
+       </div>
+       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+         <DialogTrigger asChild>
+           <Button className="bg-primary hover:bg-primary/90 w-full sm:w-auto">
+             <Plus className="w-4 h-4 mr-2" />
+             Add Medicine
+           </Button>
+         </DialogTrigger>
+         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+           <DialogHeader>
+             <DialogTitle>Add New Medicine</DialogTitle>
+           </DialogHeader>
+           <form onSubmit={handleAddMedicine} className="space-y-4 mt-2">
+             <div className="space-y-2">
+               <Label>Name *</Label>
+               <Input value={newMed.name} onChange={e => setNewMed(p => ({ ...p, name: e.target.value }))} placeholder="e.g. Paracetamol 500mg" />
+             </div>
+             <div className="grid grid-cols-2 gap-3">
+               <div className="space-y-2">
+                 <Label>Category</Label>
+                 <Input value={newMed.category} onChange={e => setNewMed(p => ({ ...p, category: e.target.value }))} placeholder="e.g. Analgesics" />
+               </div>
+               <div className="space-y-2">
+                 <Label>Quantity *</Label>
+                 <Input type="number" value={newMed.quantity} onChange={e => setNewMed(p => ({ ...p, quantity: e.target.value }))} placeholder="0" />
+               </div>
+             </div>
+             <div className="grid grid-cols-2 gap-3">
+               <div className="space-y-2">
+                 <Label>Reorder Level</Label>
+                 <Input type="number" value={newMed.reorderLevel} onChange={e => setNewMed(p => ({ ...p, reorderLevel: e.target.value }))} placeholder="10" />
+               </div>
+               <div className="space-y-2">
+                 <Label>Unit Price (KSh)</Label>
+                 <Input type="number" value={newMed.unitPrice} onChange={e => setNewMed(p => ({ ...p, unitPrice: e.target.value }))} placeholder="0" />
+               </div>
+             </div>
+             <div className="grid grid-cols-2 gap-3">
+               <div className="space-y-2">
+                 <Label>Batch Number</Label>
+                 <Input value={newMed.batchNumber} onChange={e => setNewMed(p => ({ ...p, batchNumber: e.target.value }))} placeholder="BATCH-001" />
+               </div>
+               <div className="space-y-2">
+                 <Label>Expiry Date</Label>
+                 <Input type="date" value={newMed.expiryDate} onChange={e => setNewMed(p => ({ ...p, expiryDate: e.target.value }))} />
+               </div>
+             </div>
+             <div className="space-y-2">
+               <Label>Supplier</Label>
+               <Input value={newMed.supplier} onChange={e => setNewMed(p => ({ ...p, supplier: e.target.value }))} placeholder="Supplier name" />
+             </div>
+             <Button type="submit" className="w-full">Add Medicine</Button>
+           </form>
+         </DialogContent>
+       </Dialog>
+     </motion.div>
  
       {/* Filters */}
       <motion.div
