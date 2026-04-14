@@ -291,12 +291,17 @@ function MedicineCard({ medicine, index, isAdmin, onDelete }: { medicine: Medici
          </div>
        </div>
  
-       {/* Footer */}
-       <div className="px-4 py-3 bg-muted/30 border-t border-border">
-         <p className="text-xs text-muted-foreground">
-           Supplier: {medicine.supplier}
-         </p>
-       </div>
+      {/* Footer */}
+      <div className="px-4 py-3 bg-muted/30 border-t border-border flex items-center justify-between">
+        <p className="text-xs text-muted-foreground">
+          Supplier: {medicine.supplier}
+        </p>
+        {isAdmin && (
+          <Button variant="ghost" size="sm" onClick={handleDelete} className="text-danger hover:text-danger hover:bg-danger/10 h-7 px-2">
+            <Trash2 className="w-3.5 h-3.5" />
+          </Button>
+        )}
+      </div>
      </motion.div>
    );
  }
