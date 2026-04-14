@@ -21,7 +21,8 @@ const statusConfig: Record<StockStatus, { label: string; icon: typeof CheckCircl
 };
 
 export function InventoryPage() {
-  const { medicines, addMedicine } = useInventory();
+  const { medicines, addMedicine, deleteMedicine } = useInventory();
+  const { user } = useAuth();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StockStatus | 'all'>('all');
   const [dialogOpen, setDialogOpen] = useState(false);
