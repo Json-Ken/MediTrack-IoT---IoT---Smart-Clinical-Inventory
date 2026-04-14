@@ -84,13 +84,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password,
       options: {
         emailRedirectTo: window.location.origin,
-        data: { display_name: name },
+        data: { display_name: name, role },
       },
     });
     if (error || !data.user) return false;
-
-    // Assign role
-    await supabase.from('user_roles').insert({ user_id: data.user.id, role });
     return true;
   };
 
