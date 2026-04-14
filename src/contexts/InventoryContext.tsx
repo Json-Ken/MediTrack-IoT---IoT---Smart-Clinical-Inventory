@@ -249,6 +249,11 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     await refreshData();
   };
 
+  const deleteMedicine = async (medicineId: string) => {
+    await supabase.from('medicines').delete().eq('id', medicineId);
+    await refreshData();
+  };
+
   const acknowledgeAlert = async (alertId: string) => {
     await supabase.from('alerts').update({ acknowledged: true }).eq('id', alertId);
     await refreshData();
@@ -258,7 +263,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     <InventoryContext.Provider
       value={{
         medicines, alerts, auditLogs, dispenseRecords, stats, loading,
-        addMedicine, dispenseMedicine, restockMedicine, acknowledgeAlert, refreshData,
+        addMedicine, deleteMedicine, dispenseMedicine, restockMedicine, acknowledgeAlert, refreshData,
       }}
     >
       {children}
