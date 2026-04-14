@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Filter, Package, AlertTriangle, Clock, CheckCircle, Plus } from 'lucide-react';
+import { Search, Filter, Package, AlertTriangle, Clock, CheckCircle, Plus, Trash2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useInventory } from '@/contexts/InventoryContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Medicine, StockStatus } from '@/types/inventory';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -179,7 +180,7 @@ export function InventoryPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
         <AnimatePresence mode="popLayout">
           {filteredMedicines.map((medicine, index) => (
-            <MedicineCard key={medicine.id} medicine={medicine} index={index} />
+            <MedicineCard key={medicine.id} medicine={medicine} index={index} isAdmin={user?.role === 'admin'} onDelete={deleteMedicine} />
           ))}
         </AnimatePresence>
       </div>
@@ -198,10 +199,17 @@ export function InventoryPage() {
    );
  }
  
- function MedicineCard({ medicine, index }: { medicine: Medicine; index: number }) {
-   const config = statusConfig[medicine.status];
-   const Icon = config.icon;
-   const isExpiringSoon = new Date(medicine.expiryDate) < new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
+function MedicineCard({ medicine, index, isAdmin, onDelete }: { medicine: Medicine; index: number; isAdmin?: boolean; onDelete?: (id: string) => Promise<void> }) {
+  const config = statusConfig[medicine.status];
+  const Icon = config.icon;
+  const isExpiringSoon = new Date(medicine.expiryDate) < new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
+
+  const handleDelete = async () => {
+    if (window.confirm(`Delete "${medicine.name}" from inventory?`)) {
+      await onDelete?.(medicine.id);
+      toast.success(`${medicine.name} deleted`);
+    }
+  };
  
    return (
      <motion.div
