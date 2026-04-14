@@ -20,6 +20,7 @@ interface InventoryContextType {
   stats: DashboardStats;
   loading: boolean;
   addMedicine: (medicine: Omit<Medicine, 'id' | 'status'>) => Promise<void>;
+  deleteMedicine: (medicineId: string) => Promise<void>;
   dispenseMedicine: (medicineId: string, quantity: number, userId: string, userName: string, notes?: string) => Promise<{ success: boolean; alert?: Alert }>;
   restockMedicine: (medicineId: string, quantity: number, userId: string, userName: string) => Promise<void>;
   acknowledgeAlert: (alertId: string) => Promise<void>;
