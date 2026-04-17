@@ -2,13 +2,14 @@
  import { Package, AlertTriangle, Clock, Shield, TrendingUp, TrendingDown, Activity } from 'lucide-react';
  import { StatCard } from '@/components/dashboard/StatCard';
  import { AlertsPanel } from '@/components/dashboard/AlertsPanel';
- import { InventoryChart } from '@/components/dashboard/InventoryChart';
- import { useInventory } from '@/contexts/InventoryContext';
+import { InventoryChart } from '@/components/dashboard/InventoryChart';
+import { DispenseTrendChart } from '@/components/dashboard/DispenseTrendChart';
+import { useInventory } from '@/contexts/InventoryContext';
  import { useAuth } from '@/contexts/AuthContext';
  import { format } from 'date-fns';
  
  export function DashboardPage() {
-   const { stats, medicines, alerts, acknowledgeAlert } = useInventory();
+   const { stats, medicines, alerts, dispenseRecords, acknowledgeAlert } = useInventory();
    const { user } = useAuth();
  
    return (
@@ -85,11 +86,13 @@
         />
       </div>
  
-       {/* Charts and Alerts */}
+      {/* Charts and Alerts */}
        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
          <InventoryChart medicines={medicines} />
-         <AlertsPanel alerts={alerts} onAcknowledge={acknowledgeAlert} limit={5} />
+         <DispenseTrendChart records={dispenseRecords} />
        </div>
+
+       <AlertsPanel alerts={alerts} onAcknowledge={acknowledgeAlert} limit={5} />
      </div>
    );
  }
