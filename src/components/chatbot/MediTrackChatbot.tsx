@@ -4,7 +4,6 @@ import { MessageCircle, X, Send, Stethoscope, Sparkles } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -197,7 +196,7 @@ export function MediTrackChatbot() {
             </div>
 
             {/* Messages */}
-            <ScrollArea className="flex-1 bg-gradient-to-b from-secondary/40 to-background" viewportRef={scrollRef}>
+            <div ref={scrollRef} className="flex-1 overflow-y-auto bg-gradient-to-b from-secondary/40 to-background">
               <div className="p-4 space-y-4">
                 {messages.map((m, i) => (
                   <motion.div
@@ -265,7 +264,7 @@ export function MediTrackChatbot() {
                   </div>
                 )}
               </div>
-            </ScrollArea>
+            </div>
 
             {/* Input */}
             <form

@@ -10,6 +10,7 @@ import { AlertsPage } from './AlertsPage';
 import { AuditPage } from './AuditPage';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { MobileNav } from '@/components/layout/MobileNav';
+import { MediTrackChatbot } from '@/components/chatbot/MediTrackChatbot';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
@@ -77,6 +78,7 @@ function AppContent() {
           </motion.div>
         </AnimatePresence>
       </main>
+      <MediTrackChatbot />
     </div>
   );
 }
