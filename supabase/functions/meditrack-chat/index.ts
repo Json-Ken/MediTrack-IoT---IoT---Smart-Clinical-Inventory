@@ -1,4 +1,5 @@
-// MediTrack Assistant — friendly clinic-colleague chatbot
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -41,10 +42,12 @@ Deno.serve(async (req: Request) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [{ role: "system", content: SYSTEM_PROMPT }, ...messages],
-        stream: true,
-      }),
+      model: "google/gemini-3-flash-preview",
+      messages: [{ role: "system", content: SYSTEM_PROMPT }, ...messages],
+      tools: TOOLS,
+      tool_choice: "auto",
+      stream: false,
+    }),
     });
 
     if (!response.ok) {
@@ -65,8 +68,57 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    return new Response(response.body, {
-      headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+    // Handle tool calls loop
+    let result = await response.json();
+    let choice = result.choices?.[0];
+    const conversationMessages = [{ role: "system", content: SYSTEM_PROMPT }, ...messages];
+
+    // Loop while the model wants to call tools (max 3 iterations)
+    let iterations = 0;
+    while (choice?.finish_reason === "tool_calls" && iterations < 3) {
+      iterations++;
+      const assistantMsg = choice.message;
+      conversationMessages.push(assistantMsg);
+
+      // Execute each tool call
+      for (const toolCall of assistantMsg.tool_calls || []) {
+        const fn = toolCall.function;
+        let toolResult: string;
+        try {
+          toolResult = await executeTool(fn.name, JSON.parse(fn.arguments));
+        } catch (e) {
+          toolResult = `Error: ${e instanceof Error ? e.message : "Unknown error"}`;
+        }
+        conversationMessages.push({
+          role: "tool",
+          tool_call_id: toolCall.id,
+          content: toolResult,
+        });
+      }
+
+      // Call model again with tool results
+      const followUp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-3-flash-preview",
+          messages: conversationMessages,
+          tools: TOOLS,
+          tool_choice: "auto",
+          stream: false,
+        }),
+      });
+      if (!followUp.ok) break;
+      result = await followUp.json();
+      choice = result.choices?.[0];
+    }
+
+    const content = choice?.message?.content || "Sorry, I couldn't process that right now.";
+    return new Response(JSON.stringify({ choices: [{ message: { role: "assistant", content } }] }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("meditrack-chat error:", e);
@@ -75,3 +127,110 @@ Deno.serve(async (req: Request) => {
     });
   }
 });
+
+// ─── Tool definitions ───
+const TOOLS = [
+  {
+    type: "function",
+    function: {
+      name: "query_medicines",
+      description: "Search the clinic's medicine inventory. Returns name, category, quantity, reorder_level, status, expiry_date, batch_number, supplier, and unit_price. Use this whenever the user asks about stock levels, what medicines are available, expiring items, or low-stock items.",
+      parameters: {
+        type: "object",
+        properties: {
+          search: { type: "string", description: "Optional medicine name or category to search for (case-insensitive partial match). Leave empty to get all medicines." },
+          status_filter: { type: "string", enum: ["ok", "low", "critical", "expired"], description: "Optional filter by stock status." },
+          limit: { type: "number", description: "Max rows to return. Default 20." },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "query_recent_dispenses",
+      description: "Get recent dispense records showing what medicines were dispensed, quantities, who dispensed them, and when. Use when users ask about recent dispensing activity.",
+      parameters: {
+        type: "object",
+        properties: {
+          medicine_name: { type: "string", description: "Optional filter by medicine name (partial match)." },
+          limit: { type: "number", description: "Max rows. Default 10." },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "query_alerts",
+      description: "Get active (unacknowledged) alerts for the clinic: theft alerts, low stock, expiry warnings, reorder notices.",
+      parameters: {
+        type: "object",
+        properties: {
+          type_filter: { type: "string", enum: ["theft", "low_stock", "expiry", "reorder"], description: "Optional filter by alert type." },
+          limit: { type: "number", description: "Max rows. Default 10." },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_inventory_summary",
+      description: "Get a high-level summary of the inventory: total medicines count, how many are low/critical/expired, total stock value.",
+      parameters: { type: "object", properties: {}, required: [] },
+    },
+  },
+];
+
+// ─── Tool execution ───
+async function executeTool(name: string, args: Record<string, unknown>): Promise<string> {
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+  );
+
+  switch (name) {
+    case "query_medicines": {
+      let query = supabase.from("medicines").select("name, category, quantity, reorder_level, status, expiry_date, batch_number, supplier, unit_price");
+      if (args.search) query = query.ilike("name", `%${args.search}%`);
+      if (args.status_filter) query = query.eq("status", args.status_filter);
+      const { data, error } = await query.limit(Number(args.limit) || 20);
+      if (error) return `DB error: ${error.message}`;
+      if (!data?.length) return "No medicines found matching that query.";
+      return JSON.stringify(data);
+    }
+    case "query_recent_dispenses": {
+      let query = supabase.from("dispense_records").select("medicine_name, quantity, user_name, notes, created_at").order("created_at", { ascending: false });
+      if (args.medicine_name) query = query.ilike("medicine_name", `%${args.medicine_name}%`);
+      const { data, error } = await query.limit(Number(args.limit) || 10);
+      if (error) return `DB error: ${error.message}`;
+      if (!data?.length) return "No recent dispense records found.";
+      return JSON.stringify(data);
+    }
+    case "query_alerts": {
+      let query = supabase.from("alerts").select("type, severity, title, message, created_at").eq("acknowledged", false).order("created_at", { ascending: false });
+      if (args.type_filter) query = query.eq("type", args.type_filter);
+      const { data, error } = await query.limit(Number(args.limit) || 10);
+      if (error) return `DB error: ${error.message}`;
+      if (!data?.length) return "No active alerts.";
+      return JSON.stringify(data);
+    }
+    case "get_inventory_summary": {
+      const { data, error } = await supabase.from("medicines").select("quantity, status, unit_price");
+      if (error) return `DB error: ${error.message}`;
+      const total = data?.length || 0;
+      const low = data?.filter(m => m.status === "low").length || 0;
+      const critical = data?.filter(m => m.status === "critical").length || 0;
+      const expired = data?.filter(m => m.status === "expired").length || 0;
+      const totalValue = data?.reduce((s, m) => s + (m.quantity * (Number(m.unit_price) || 0)), 0) || 0;
+      const totalUnits = data?.reduce((s, m) => s + m.quantity, 0) || 0;
+      return JSON.stringify({ total_medicines: total, total_units: totalUnits, low_stock: low, critical_stock: critical, expired, total_value: totalValue });
+    }
+    default:
+      return `Unknown tool: ${name}`;
+  }
+}
