@@ -76,49 +76,9 @@ export function MediTrackChatbot() {
       }
       if (!resp.ok || !resp.body) throw new Error('Failed to start stream');
 
-      const reader = resp.body.getReader();
-      const decoder = new TextDecoder();
-      let textBuffer = '';
-      let assistantSoFar = '';
-      let createdAssistant = false;
-      let streamDone = false;
-
-      const upsert = (chunk: string) => {
-        assistantSoFar += chunk;
-        setMessages((prev) => {
-          if (!createdAssistant) {
-            createdAssistant = true;
-            return [...prev, { role: 'assistant', content: assistantSoFar }];
-          }
-          return prev.map((m, i) =>
-            i === prev.length - 1 ? { ...m, content: assistantSoFar } : m
-          );
-        });
-      };
-
-      while (!streamDone) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        textBuffer += decoder.decode(value, { stream: true });
-        let nl: number;
-        while ((nl = textBuffer.indexOf('\n')) !== -1) {
-          let line = textBuffer.slice(0, nl);
-          textBuffer = textBuffer.slice(nl + 1);
-          if (line.endsWith('\r')) line = line.slice(0, -1);
-          if (line.startsWith(':') || line.trim() === '') continue;
-          if (!line.startsWith('data: ')) continue;
-          const jsonStr = line.slice(6).trim();
-          if (jsonStr === '[DONE]') { streamDone = true; break; }
-          try {
-            const parsed = JSON.parse(jsonStr);
-            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-            if (content) upsert(content);
-          } catch {
-            textBuffer = line + '\n' + textBuffer;
-            break;
-          }
-        }
-      }
+      const data = await resp.json();
+      const content = data.choices?.[0]?.message?.content || 'Sorry, I couldn\'t process that right now.';
+      setMessages((prev) => [...prev, { role: 'assistant', content }]);
     } catch (e) {
       console.error(e);
       toast.error('Something went wrong. Please try again.');
