@@ -146,6 +146,99 @@ export type Database = {
           },
         ]
       }
+      iot_devices: {
+        Row: {
+          api_key_hash: string
+          api_key_prefix: string
+          created_at: string
+          device_type: string
+          id: string
+          is_active: boolean
+          last_seen_at: string | null
+          location: string | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          api_key_hash: string
+          api_key_prefix: string
+          created_at?: string
+          device_type?: string
+          id?: string
+          is_active?: boolean
+          last_seen_at?: string | null
+          location?: string | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          api_key_hash?: string
+          api_key_prefix?: string
+          created_at?: string
+          device_type?: string
+          id?: string
+          is_active?: boolean
+          last_seen_at?: string | null
+          location?: string | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      iot_events: {
+        Row: {
+          created_at: string
+          device_id: string | null
+          device_name: string | null
+          event_type: string
+          id: string
+          medicine_id: string | null
+          medicine_name: string | null
+          payload: Json | null
+          quantity_change: number
+          scan_code: string | null
+        }
+        Insert: {
+          created_at?: string
+          device_id?: string | null
+          device_name?: string | null
+          event_type: string
+          id?: string
+          medicine_id?: string | null
+          medicine_name?: string | null
+          payload?: Json | null
+          quantity_change?: number
+          scan_code?: string | null
+        }
+        Update: {
+          created_at?: string
+          device_id?: string | null
+          device_name?: string | null
+          event_type?: string
+          id?: string
+          medicine_id?: string | null
+          medicine_name?: string | null
+          payload?: Json | null
+          quantity_change?: number
+          scan_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "iot_events_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "iot_devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "iot_events_medicine_id_fkey"
+            columns: ["medicine_id"]
+            isOneToOne: false
+            referencedRelation: "medicines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       medicines: {
         Row: {
           batch_number: string | null
@@ -154,8 +247,10 @@ export type Database = {
           expiry_date: string | null
           id: string
           name: string
+          qr_code: string | null
           quantity: number
           reorder_level: number
+          rfid_tag: string | null
           status: string
           supplier: string | null
           unit_price: number | null
@@ -168,8 +263,10 @@ export type Database = {
           expiry_date?: string | null
           id?: string
           name: string
+          qr_code?: string | null
           quantity?: number
           reorder_level?: number
+          rfid_tag?: string | null
           status?: string
           supplier?: string | null
           unit_price?: number | null
@@ -182,8 +279,10 @@ export type Database = {
           expiry_date?: string | null
           id?: string
           name?: string
+          qr_code?: string | null
           quantity?: number
           reorder_level?: number
+          rfid_tag?: string | null
           status?: string
           supplier?: string | null
           unit_price?: number | null
@@ -247,6 +346,15 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      verify_iot_device_key: {
+        Args: { _api_key: string }
+        Returns: {
+          device_id: string
+          device_name: string
+          device_type: string
+          is_active: boolean
+        }[]
       }
     }
     Enums: {
