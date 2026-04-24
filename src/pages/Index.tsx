@@ -8,13 +8,14 @@ import { InventoryPage } from './InventoryPage';
 import { DispensePage } from './DispensePage';
 import { AlertsPage } from './AlertsPage';
 import { AuditPage } from './AuditPage';
+import { IoTPage } from './IoTPage';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { MobileNav } from '@/components/layout/MobileNav';
 import { MediTrackChatbot } from '@/components/chatbot/MediTrackChatbot';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
-type Page = 'dashboard' | 'inventory' | 'dispense' | 'alerts' | 'audit';
+type Page = 'dashboard' | 'inventory' | 'dispense' | 'alerts' | 'audit' | 'iot';
 
 function AppContent() {
   const { isAuthenticated, loading } = useAuth();
@@ -45,6 +46,8 @@ function AppContent() {
         return <AlertsPage />;
       case 'audit':
         return <AuditPage />;
+      case 'iot':
+        return <IoTPage />;
       default:
         return <DashboardPage />;
     }
