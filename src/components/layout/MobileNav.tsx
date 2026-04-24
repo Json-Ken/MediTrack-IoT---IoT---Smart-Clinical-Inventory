@@ -8,7 +8,8 @@ import {
   AlertTriangle,
   LogOut,
   Menu,
-  X
+  X,
+  Cpu
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -24,6 +25,7 @@ const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'inventory', label: 'Inventory', icon: Pill },
   { id: 'dispense', label: 'Dispense', icon: ClipboardList },
+  { id: 'iot', label: 'IoT Devices', icon: Cpu },
   { id: 'alerts', label: 'Alerts', icon: AlertTriangle },
   { id: 'audit', label: 'Audit Logs', icon: FileText },
 ];
