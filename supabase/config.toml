@@ -2,3 +2,6 @@ project_id = "pwrfddvvmtoqqlivhjrf"
 
 [functions.meditrack-chat]
 verify_jwt = false
+
+[functions.iot-ingest]
+verify_jwt = false
