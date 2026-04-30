@@ -14,6 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useInventory } from '@/contexts/InventoryContext';
 import { toast } from 'sonner';
 import { format, formatDistanceToNow } from 'date-fns';
+import { QuickScanWidget } from '@/components/iot/QuickScanWidget';
 
 interface IoTDevice {
   id: string;
@@ -237,6 +238,9 @@ export function IoTPage() {
         <p className="text-xs text-muted-foreground mb-1">Devices POST events to:</p>
         <code className="text-xs break-all font-mono">{ingestUrl}</code>
       </Card>
+
+      {/* Quick scan widget */}
+      <QuickScanWidget />
 
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Devices */}
