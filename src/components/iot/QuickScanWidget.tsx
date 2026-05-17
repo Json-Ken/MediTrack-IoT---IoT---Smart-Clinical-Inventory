@@ -10,11 +10,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { AlertTriangle } from 'lucide-react';
 
 type EventType = 'dispense' | 'restock';
 type ScanResult = { ok: boolean; code: string; medicine?: string; message: string; at: number };
 
 const KEY_STORAGE = 'meditrack.iot.deviceKey';
+const NEAR_EXPIRY_DAYS = 30;
+
+type PendingExpiry = {
+  code: string;
+  medicineName: string;
+  expiryDate: string;
+  daysLeft: number;
+  expired: boolean;
+};
 
 export function QuickScanWidget() {
   const [deviceKey, setDeviceKey] = useState<string>(() => localStorage.getItem(KEY_STORAGE) || '');
@@ -25,6 +36,7 @@ export function QuickScanWidget() {
   const [busy, setBusy] = useState(false);
   const [recent, setRecent] = useState<ScanResult[]>([]);
   const [mode, setMode] = useState<'camera' | 'hid'>('hid');
+  const [pendingExpiry, setPendingExpiry] = useState<PendingExpiry | null>(null);
 
   // HID buffer
   const hidInputRef = useRef<HTMLInputElement>(null);
@@ -37,19 +49,7 @@ export function QuickScanWidget() {
   const [cameraError, setCameraError] = useState<string | null>(null);
   const lastScanRef = useRef<{ code: string; at: number }>({ code: '', at: 0 });
 
-  const submitScan = useCallback(async (code: string) => {
-    const trimmed = code.trim();
-    if (!trimmed) return;
-    if (!deviceKey) {
-      toast.error('Set a device key first');
-      setKeyDialogOpen(true);
-      return;
-    }
-    // de-dupe rapid repeats from camera
-    const now = Date.now();
-    if (lastScanRef.current.code === trimmed && now - lastScanRef.current.at < 1500) return;
-    lastScanRef.current = { code: trimmed, at: now };
-
+  const performIngest = useCallback(async (trimmed: string, now: number) => {
     setBusy(true);
     try {
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/iot-ingest`;
@@ -91,6 +91,60 @@ export function QuickScanWidget() {
       setBusy(false);
     }
   }, [deviceKey, eventType, quantity]);
+
+  const submitScan = useCallback(async (code: string) => {
+    const trimmed = code.trim();
+    if (!trimmed) return;
+    if (!deviceKey) {
+      toast.error('Set a device key first');
+      setKeyDialogOpen(true);
+      return;
+    }
+    // de-dupe rapid repeats from camera
+    const now = Date.now();
+    if (lastScanRef.current.code === trimmed && now - lastScanRef.current.at < 1500) return;
+    lastScanRef.current = { code: trimmed, at: now };
+
+    // Pre-check expiry for dispense events
+    if (eventType === 'dispense') {
+      setBusy(true);
+      const { data: med, error } = await supabase
+        .from('medicines')
+        .select('name, expiry_date')
+        .or(`rfid_tag.eq.${trimmed},qr_code.eq.${trimmed}`)
+        .maybeSingle();
+      setBusy(false);
+
+      if (!error && med?.expiry_date) {
+        const expiry = new Date(med.expiry_date);
+        const daysLeft = Math.floor((expiry.getTime() - Date.now()) / 86400000);
+        if (daysLeft < 0) {
+          const result: ScanResult = {
+            ok: false,
+            code: trimmed,
+            medicine: med.name,
+            message: `BLOCKED — ${med.name} expired on ${expiry.toLocaleDateString()}`,
+            at: now,
+          };
+          setRecent((prev) => [result, ...prev].slice(0, 6));
+          toast.error(result.message);
+          return;
+        }
+        if (daysLeft <= NEAR_EXPIRY_DAYS) {
+          setPendingExpiry({
+            code: trimmed,
+            medicineName: med.name,
+            expiryDate: expiry.toLocaleDateString(),
+            daysLeft,
+            expired: false,
+          });
+          return;
+        }
+      }
+    }
+
+    await performIngest(trimmed, now);
+  }, [deviceKey, eventType, performIngest]);
 
   // HID listener: capture rapid keystrokes ending with Enter (typical for USB scanners)
   useEffect(() => {
@@ -278,6 +332,42 @@ export function QuickScanWidget() {
           ))}
         </AnimatePresence>
       </div>
+
+      <Dialog open={!!pendingExpiry} onOpenChange={(open) => { if (!open) setPendingExpiry(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-warning">
+              <AlertTriangle className="w-5 h-5" /> Near-expiry batch
+            </DialogTitle>
+          </DialogHeader>
+          {pendingExpiry && (
+            <div className="space-y-3 text-sm">
+              <p>
+                <span className="font-semibold">{pendingExpiry.medicineName}</span> expires on{' '}
+                <span className="font-semibold">{pendingExpiry.expiryDate}</span>{' '}
+                <span className="text-muted-foreground">
+                  ({pendingExpiry.daysLeft} day{pendingExpiry.daysLeft === 1 ? '' : 's'} left)
+                </span>.
+              </p>
+              <p className="text-muted-foreground">Confirm to proceed with dispensing this batch, or cancel and pick a fresher one.</p>
+              <p className="font-mono text-xs text-muted-foreground">Scan: {pendingExpiry.code}</p>
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" onClick={() => setPendingExpiry(null)}>Cancel</Button>
+            <Button
+              onClick={() => {
+                if (!pendingExpiry) return;
+                const { code } = pendingExpiry;
+                setPendingExpiry(null);
+                performIngest(code, Date.now());
+              }}
+            >
+              Dispense anyway
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
