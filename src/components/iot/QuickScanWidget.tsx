@@ -36,6 +36,7 @@ export function QuickScanWidget() {
   const [busy, setBusy] = useState(false);
   const [recent, setRecent] = useState<ScanResult[]>([]);
   const [mode, setMode] = useState<'camera' | 'hid'>('hid');
+  const [pendingExpiry, setPendingExpiry] = useState<PendingExpiry | null>(null);
 
   // HID buffer
   const hidInputRef = useRef<HTMLInputElement>(null);
@@ -48,19 +49,7 @@ export function QuickScanWidget() {
   const [cameraError, setCameraError] = useState<string | null>(null);
   const lastScanRef = useRef<{ code: string; at: number }>({ code: '', at: 0 });
 
-  const submitScan = useCallback(async (code: string) => {
-    const trimmed = code.trim();
-    if (!trimmed) return;
-    if (!deviceKey) {
-      toast.error('Set a device key first');
-      setKeyDialogOpen(true);
-      return;
-    }
-    // de-dupe rapid repeats from camera
-    const now = Date.now();
-    if (lastScanRef.current.code === trimmed && now - lastScanRef.current.at < 1500) return;
-    lastScanRef.current = { code: trimmed, at: now };
-
+  const performIngest = useCallback(async (trimmed: string, now: number) => {
     setBusy(true);
     try {
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/iot-ingest`;
@@ -102,6 +91,60 @@ export function QuickScanWidget() {
       setBusy(false);
     }
   }, [deviceKey, eventType, quantity]);
+
+  const submitScan = useCallback(async (code: string) => {
+    const trimmed = code.trim();
+    if (!trimmed) return;
+    if (!deviceKey) {
+      toast.error('Set a device key first');
+      setKeyDialogOpen(true);
+      return;
+    }
+    // de-dupe rapid repeats from camera
+    const now = Date.now();
+    if (lastScanRef.current.code === trimmed && now - lastScanRef.current.at < 1500) return;
+    lastScanRef.current = { code: trimmed, at: now };
+
+    // Pre-check expiry for dispense events
+    if (eventType === 'dispense') {
+      setBusy(true);
+      const { data: med, error } = await supabase
+        .from('medicines')
+        .select('name, expiry_date')
+        .or(`rfid_tag.eq.${trimmed},qr_code.eq.${trimmed}`)
+        .maybeSingle();
+      setBusy(false);
+
+      if (!error && med?.expiry_date) {
+        const expiry = new Date(med.expiry_date);
+        const daysLeft = Math.floor((expiry.getTime() - Date.now()) / 86400000);
+        if (daysLeft < 0) {
+          const result: ScanResult = {
+            ok: false,
+            code: trimmed,
+            medicine: med.name,
+            message: `BLOCKED — ${med.name} expired on ${expiry.toLocaleDateString()}`,
+            at: now,
+          };
+          setRecent((prev) => [result, ...prev].slice(0, 6));
+          toast.error(result.message);
+          return;
+        }
+        if (daysLeft <= NEAR_EXPIRY_DAYS) {
+          setPendingExpiry({
+            code: trimmed,
+            medicineName: med.name,
+            expiryDate: expiry.toLocaleDateString(),
+            daysLeft,
+            expired: false,
+          });
+          return;
+        }
+      }
+    }
+
+    await performIngest(trimmed, now);
+  }, [deviceKey, eventType, performIngest]);
 
   // HID listener: capture rapid keystrokes ending with Enter (typical for USB scanners)
   useEffect(() => {
