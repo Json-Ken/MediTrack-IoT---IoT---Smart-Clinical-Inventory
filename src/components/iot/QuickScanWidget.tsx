@@ -332,6 +332,42 @@ export function QuickScanWidget() {
           ))}
         </AnimatePresence>
       </div>
+
+      <Dialog open={!!pendingExpiry} onOpenChange={(open) => { if (!open) setPendingExpiry(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-warning">
+              <AlertTriangle className="w-5 h-5" /> Near-expiry batch
+            </DialogTitle>
+          </DialogHeader>
+          {pendingExpiry && (
+            <div className="space-y-3 text-sm">
+              <p>
+                <span className="font-semibold">{pendingExpiry.medicineName}</span> expires on{' '}
+                <span className="font-semibold">{pendingExpiry.expiryDate}</span>{' '}
+                <span className="text-muted-foreground">
+                  ({pendingExpiry.daysLeft} day{pendingExpiry.daysLeft === 1 ? '' : 's'} left)
+                </span>.
+              </p>
+              <p className="text-muted-foreground">Confirm to proceed with dispensing this batch, or cancel and pick a fresher one.</p>
+              <p className="font-mono text-xs text-muted-foreground">Scan: {pendingExpiry.code}</p>
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" onClick={() => setPendingExpiry(null)}>Cancel</Button>
+            <Button
+              onClick={() => {
+                if (!pendingExpiry) return;
+                const { code } = pendingExpiry;
+                setPendingExpiry(null);
+                performIngest(code, Date.now());
+              }}
+            >
+              Dispense anyway
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
