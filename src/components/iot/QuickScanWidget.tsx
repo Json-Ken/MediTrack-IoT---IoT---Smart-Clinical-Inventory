@@ -10,11 +10,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { AlertTriangle } from 'lucide-react';
 
 type EventType = 'dispense' | 'restock';
 type ScanResult = { ok: boolean; code: string; medicine?: string; message: string; at: number };
 
 const KEY_STORAGE = 'meditrack.iot.deviceKey';
+const NEAR_EXPIRY_DAYS = 30;
+
+type PendingExpiry = {
+  code: string;
+  medicineName: string;
+  expiryDate: string;
+  daysLeft: number;
+  expired: boolean;
+};
 
 export function QuickScanWidget() {
   const [deviceKey, setDeviceKey] = useState<string>(() => localStorage.getItem(KEY_STORAGE) || '');
